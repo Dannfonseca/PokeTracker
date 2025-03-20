@@ -48,17 +48,15 @@ const clanData = {
 document.getElementById('selectEntireBag').addEventListener('click', selectEntireBag);
 
 function selectEntireBag() {
-    // Verifica se currentClan foi inicializado
     if (!currentClan) {
         console.error('currentClan não foi inicializado.');
         return;
     }
 
-    // Faz uma requisição para obter todos os Pokémons do clã atual
     fetch(`http://localhost:3000/clans/${currentClan}/pokemons`)
         .then(response => response.json())
         .then(pokemons => {
-            // Filtra apenas os Pokémons disponíveis
+            // Filtra apenas os Pokémons disponíveis e que ainda não estão selecionados
             const availablePokemons = pokemons.filter(pokemon => pokemon.status === 'available');
 
             if (availablePokemons.length === 0) {
@@ -66,7 +64,6 @@ function selectEntireBag() {
                 return;
             }
 
-            // Verifica se todos os Pokémons disponíveis já estão selecionados
             const allSelected = availablePokemons.every(pokemon => selectedPokemons[pokemon.id]);
 
             if (allSelected) {
@@ -75,34 +72,43 @@ function selectEntireBag() {
                     delete selectedPokemons[pokemon.id];
                 });
 
-                // Altera o botão para "Adicionar Tudo"
-                const selectButton = document.getElementById('selectEntireBag');
-                selectButton.textContent = 'Adicionar Tudo';
-                selectButton.classList.remove('remove-all');
+                document.querySelectorAll('.pokemon-item.selected').forEach(item => {
+                    item.classList.remove('selected');
+                    const button = item.querySelector('.select-button');
+                    if (button) {
+                        button.textContent = '+';
+                        button.classList.remove('selected');
+                    }
+                });
 
-                
+                document.getElementById('selectEntireBag').textContent = 'Adicionar Tudo';
             } else {
                 // Adiciona os Pokémons disponíveis à lista de selecionados
                 availablePokemons.forEach(pokemon => {
                     selectedPokemons[pokemon.id] = true;
                 });
 
-                // Altera o botão para "Retirar Tudo"
-                const selectButton = document.getElementById('selectEntireBag');
-                selectButton.textContent = 'Retirar Tudo';
-                selectButton.classList.add('remove-all');
+                document.querySelectorAll('.pokemon-item').forEach(item => {
+                    const pokemonId = item.dataset.pokemon;
+                    if (selectedPokemons[pokemonId]) {
+                        item.classList.add('selected');
+                        const button = item.querySelector('.select-button');
+                        if (button) {
+                            button.textContent = '✓';
+                            button.classList.add('selected');
+                        }
+                    }
+                });
 
-                
+                document.getElementById('selectEntireBag').textContent = 'Retirar Tudo';
             }
-
-            // Atualiza a interface para refletir a seleção
-            loadPokemonsByClan(currentClan);
         })
         .catch(error => {
             console.error('Erro ao buscar Pokémons do clã:', error);
             alert('Erro ao buscar Pokémons do clã. Tente novamente.');
         });
 }
+
 
 // Adiciona o evento ao botão "Adicionar Pokémon"
 const addPokemonButton = document.getElementById('addPokemonButton');
@@ -1343,14 +1349,13 @@ function addPokemonToBag() {
     const selectedClan = document.getElementById('clanSelect').value;
 
     if (!newPokemonName || !selectedClan) {
-        
         return;
     }
 
     const addButton = document.getElementById('addPokemonButton');
     addButton.disabled = true;
 
-    showSpinner(); // Mostrar o spinner
+    showSpinner(); // Mostrar o spinner antes da requisição
 
     const requestBody = {
         name: newPokemonName,
@@ -1383,7 +1388,7 @@ function addPokemonToBag() {
     })
     .finally(() => {
         addButton.disabled = false;
-        hideSpinner(); // Esconder o spinner
+        hideSpinner(); // Ocultar o spinner após a conclusão da requisição
     });
 }
 

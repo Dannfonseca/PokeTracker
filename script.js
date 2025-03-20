@@ -839,69 +839,110 @@ function confirmPartialReturnAction() {
         return;
     }
 
-    // Buscar os registros de histórico
     fetch('http://localhost:3000/history')
         .then(response => response.json())
         .then(history => {
             console.log('Histórico completo:', history);
 
-            // Buscar os nomes dos Pokémons a partir dos IDs
-            const promises = history.map(entry => {
-                return fetch(`http://localhost:3000/pokemons/${entry.pokemon}`)
-                    .then(response => response.json())
-                    .then(pokemon => ({ ...entry, pokemonName: pokemon.name }));
+            const historyWithNames = history.map(entry => ({
+                ...entry,
+                pokemonName: entry.pokemon_name,
+                clan: entry.clan, // Adiciona o clã do Pokémon
+                allReturned: entry.returned === 1 
+            }));
+
+            console.log('Histórico com nomes:', historyWithNames);
+
+            const entriesToReturn = historyWithNames.filter(entry => 
+                pokemonsToReturn.includes(entry.pokemonName) && 
+                entry.returned === 0
+            );
+            console.log('Registros a serem devolvidos:', entriesToReturn);
+
+            if (entriesToReturn.length === 0) {
+                alert('Nenhum Pokémon selecionado está ativo para devolução.');
+                return;
+            }
+
+            const returnPromises = entriesToReturn.map(entry => {
+                return fetch(`http://localhost:3000/history/${entry.id}/return`, {
+                    method: 'PUT',
+                })
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Pokémon devolvido:', data);
+                });
             });
 
-            Promise.all(promises)
-                .then(historyWithNames => {
-                    console.log('Histórico com nomes:', historyWithNames);
-
-                    // Filtrar os Pokémons selecionados que estão ativos
-                    const entriesToReturn = historyWithNames.filter(entry => 
-                        pokemonsToReturn.includes(entry.pokemonName) && 
-                        entry.returned === 0 // Certifique-se de que o Pokémon não foi devolvido
-                    );
-                    console.log('Registros a serem devolvidos:', entriesToReturn);
-
-                    if (entriesToReturn.length === 0) {
-                        alert('Nenhum Pokémon selecionado está ativo para devolução.');
-                        return;
+            Promise.all(returnPromises)
+                .then(() => {
+                    alert('Pokémons devolvidos com sucesso!');
+                    closePartialReturnModal();
+                    renderActivePokemons();
+                    if (currentClan !== 'home') {
+                        loadPokemonsByClan(currentClan);
                     }
-
-                    // Devolver os Pokémons selecionados
-                    const returnPromises = entriesToReturn.map(entry => {
-                        return fetch(`http://localhost:3000/history/${entry.id}/return`, {
-                            method: 'PUT',
-                        })
-                        .then(response => response.json())
-                        .then(data => {
-                            console.log('Pokémon devolvido:', data);
-                        });
-                    });
-
-                    Promise.all(returnPromises)
-                        .then(() => {
-                            alert('Pokémons devolvidos com sucesso!');
-                            closePartialReturnModal(); // Fechar o modal
-                            renderActivePokemons(); // Atualizar a lista de Pokémons em uso
-                            if (currentClan !== 'home') {
-                                loadPokemonsByClan(currentClan); // Recarregar Pokémons do clã atual
-                            }
-                        })
-                        .catch(error => {
-                            console.error('Erro ao devolver Pokémon:', error);
-                            alert('Erro ao devolver Pokémon. Atualizando a página...');
-                            window.location.reload(); // Atualiza a página
-                        });
                 })
                 .catch(error => {
-                    console.error('Erro ao buscar nomes dos Pokémons:', error);
+                    console.error('Erro ao devolver Pokémon:', error);
+                    alert('Erro ao devolver Pokémon. Atualizando a página...');
+                    window.location.reload();
                 });
         })
         .catch(error => {
             console.error('Erro ao buscar histórico:', error);
         });
 }
+
+// Modificar a função de exclusão para permitir deletar apenas se todos os Pokémons estiverem disponíveis
+function deleteHistoryItem(trainer, date) {
+    fetch('http://localhost:3000/history')
+        .then(response => response.json())
+        .then(history => {
+            const entry = history.find(item => item.trainer === trainer && item.date === date);
+            if (!entry) {
+                alert('Registro de histórico não encontrado.');
+                return;
+            }
+
+            if (!entry.allReturned) {
+                alert('Não é possível deletar este log enquanto houver Pokémons emprestados.');
+                return;
+            }
+
+            fetch(`http://localhost:3000/history/${entry.id}`, {
+                method: 'DELETE'
+            })
+            .then(response => response.json())
+            .then(data => {
+                alert('Registro deletado com sucesso!');
+                renderHistory();
+            })
+            .catch(error => {
+                console.error('Erro ao deletar histórico:', error);
+            });
+        })
+        .catch(error => {
+            console.error('Erro ao buscar histórico:', error);
+        });
+}
+
+function getClanColor(clan) {
+    const clanColors = {
+        malefic: '#6b21a8',
+        wingeon: '#0284c7',
+        ironhard: '#64748b',
+        volcanic: '#dc2626',
+        seavell: '#0891b2',
+        gardestrike: '#b45309',
+        orebound: '#92400e',
+        naturia: '#16a34a',
+        psycraft: '#d946ef',
+        raibolt: '#facc15'
+    };
+    return clanColors[clan] || '#000000'; // Preto como fallback
+}
+
 
 function closePartialReturnModal() {
     partialReturnModal.style.display = 'none';
@@ -936,10 +977,12 @@ function renderHistory(filter = 'all', search = '') {
                     };
                 }
                 groupedHistory[key].pokemons.push({
-                    name: entry.pokemon_name, // Usar o nome do Pokémon
+                    id: entry.pokemon, // Mantém o ID do Pokémon
+                    name: entry.pokemon_name || 'Nome não encontrado', 
                     returned: entry.returned,
                     returnDate: entry.returnDate,
                 });
+                
 
                 if (!entry.returned) {
                     groupedHistory[key].allReturned = false;
@@ -1169,7 +1212,7 @@ function renderHistory(filter = 'all', search = '') {
                     };
                 }
                 groupedHistory[key].pokemons.push({
-                    name: entry.pokemon,
+                    name: entry.pokemon_name, // Usar o nome do Pokémon ao invés do ID
                     returned: entry.returned,
                     returnDate: entry.returnDate,
                 });
@@ -1273,6 +1316,7 @@ function renderHistory(filter = 'all', search = '') {
             console.error('Erro ao buscar histórico:', error);
         });
 }
+
 
 // Função para carregar os clãs no select da modal
 function loadClansInModal() {

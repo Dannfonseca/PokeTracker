@@ -57,6 +57,17 @@
     --raibolt-color: #facc15;
 }
 
+.active-pokemon-item.malefic { border-left-color: var(--malefic-color); }
+.active-pokemon-item.wingeon { border-left-color: var(--wingeon-color); }
+.active-pokemon-item.ironhard { border-left-color: var(--ironhard-color); }
+.active-pokemon-item.volcanic { border-left-color: var(--volcanic-color); }
+.active-pokemon-item.seavell { border-left-color: var(--seavell-color); }
+.active-pokemon-item.gardestrike { border-left-color: var(--gardestrike-color); }
+.active-pokemon-item.orebound { border-left-color: var(--orebound-color); }
+.active-pokemon-item.naturia { border-left-color: var(--naturia-color); }
+.active-pokemon-item.psycraft { border-left-color: var(--psycraft-color); }
+.active-pokemon-item.raibolt { border-left-color: var(--raibolt-color); }
+
 * {
     margin: 0;
     padding: 0;

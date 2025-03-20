@@ -120,16 +120,25 @@ app.get('/clans/:clan/pokemons', (req, res) => {
 // Endpoint para obter todo o histórico de Pokémons
 app.get('/history', (req, res) => {
     const query = `
-        SELECT id, pokemon, trainer, date, returned, returnDate
-        FROM history
-        ORDER BY date DESC
+        SELECT h.id, p.name AS pokemon_name, h.trainer, h.date, h.returned, h.returnDate
+        FROM history h
+        LEFT JOIN pokemon p ON h.pokemon = p.id
+        ORDER BY h.date DESC
     `;
 
     db.all(query, [], (err, rows) => {
-        if (err) return res.status(500).json({ error: err.message });
+        if (err) {
+            return res.status(500).json({ error: err.message });
+        }
+
+        // Verifica se os nomes dos Pokémons estão vindo corretamente
+        console.log("Histórico retornado:", rows);
+
         res.status(200).json(rows);
     });
 });
+
+
 
 // Endpoint para obter o histórico ativo de Pokémons emprestados
 app.get('/history/active', (req, res) => {

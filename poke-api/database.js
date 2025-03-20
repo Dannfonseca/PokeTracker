@@ -9,15 +9,7 @@ const db = new sqlite3.Database('./database.sqlite', (err) => {
         console.log('Conectado ao banco de dados SQLite.');
 
         db.serialize(() => {
-            db.run(`
-                ALTER TABLE history ADD COLUMN pokemon_name TEXT;
-            `, (err) => {
-                if (err) {
-                    console.error('Erro ao adicionar coluna pokemon_name:', err.message);
-                } else {
-                    console.log('Coluna pokemon_name adicionada com sucesso.');
-                }
-            });
+            
 
             // Criar tabela pokemon_type
             db.run(`
@@ -103,6 +95,7 @@ const db = new sqlite3.Database('./database.sqlite', (err) => {
                 CREATE TABLE IF NOT EXISTS history (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     pokemon TEXT NOT NULL,
+                    pokemon_name TEXT NOT NULL,  -- Agora a coluna já está na criação
                     trainer TEXT NOT NULL,
                     date TEXT NOT NULL,
                     returned INTEGER DEFAULT 0,
